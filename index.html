@@ -1,0 +1,179 @@
+// คลังโจทย์เริ่มต้น
+let mcqQuestions = [
+  {
+    id: 1,
+    question: "จงหาค่าของ $\\lim_{x \\to 3} \\frac{x^2 - 9}{x - 3}$",
+    options: ["0", "3", "6", "หาค่าไม่ได้"],
+    correctIndex: 2,
+    explanation: "แยกตัวประกอบเศษได้ $(x-3)(x+3)$ ตัดกับส่วน $(x-3)$ จะเหลือ $\\lim_{x \\to 3}(x+3) = 6$"
+  }
+];
+
+let subjectiveQuestions = [
+  {
+    id: 1,
+    question: "จงหาปฏิยานุพันธ์ของ $\\int (6x^2 + 4x - 3) \\, dx$",
+    solution: `
+      <p class="font-bold text-slate-800">วิธีทำ:</p>
+      <p>$$\\int (6x^2 + 4x - 3) \\, dx = 2x^3 + 2x^2 - 3x + C$$</p>
+    `
+  }
+];
+
+// สลับช่องป้อนข้อมูลตามประเภทโจทย์
+function toggleTypeFields() {
+  const type = document.getElementById('type-select').value;
+  const mcqInputs = document.getElementById('mcq-inputs');
+  if (type === 'subjective') {
+    mcqInputs.classList.add('hidden');
+  } else {
+    mcqInputs.classList.remove('hidden');
+  }
+  updatePreview();
+}
+
+// อัปเดตการแสดงผลตัวอย่าง (Live Preview)
+function updatePreview() {
+  const type = document.getElementById('type-select').value;
+  const qText = document.getElementById('q-text').value || 'ตัวอย่างคำถาม...';
+  const expText = document.getElementById('explanation-text').value || 'รายละเอียดเฉลย...';
+  const previewBox = document.getElementById('preview-box');
+
+  if (type === 'mcq') {
+    const opts = [
+      document.getElementById('opt-0').value || 'ตัวเลือก 1',
+      document.getElementById('opt-1').value || 'ตัวเลือก 2',
+      document.getElementById('opt-2').value || 'ตัวเลือก 3',
+      document.getElementById('opt-3').value || 'ตัวเลือก 4'
+    ];
+    previewBox.innerHTML = `
+      <p class="font-semibold text-slate-800 mb-2">${qText}</p>
+      <div class="space-y-1 mb-2">
+        ${opts.map(o => `<div class="p-2 border rounded bg-white">${o}</div>`).join('')}
+      </div>
+      <p class="text-xs text-slate-500"><b>เฉลย:</b> ${expText}</p>
+    `;
+  } else {
+    previewBox.innerHTML = `
+      <p class="font-semibold text-slate-800 mb-2">${qText}</p>
+      <div class="p-3 bg-emerald-50 border-l-4 border-emerald-500 rounded text-slate-700">
+        ${expText}
+      </div>
+    `;
+  }
+
+  if (window.MathJax) {
+    MathJax.typesetPromise([previewBox]);
+  }
+}
+
+// เพิ่มโจทย์ใหม่เข้าระบบ
+function addCustomQuestion() {
+  const type = document.getElementById('type-select').value;
+  const qText = document.getElementById('q-text').value;
+  const expText = document.getElementById('explanation-text').value;
+
+  if (type === 'mcq') {
+    const newMCQ = {
+      id: Date.now(),
+      question: qText,
+      options: [
+        document.getElementById('opt-0').value,
+        document.getElementById('opt-1').value,
+        document.getElementById('opt-2').value,
+        document.getElementById('opt-3').value
+      ],
+      correctIndex: parseInt(document.getElementById('correct-opt').value),
+      explanation: expText
+    };
+    mcqQuestions.push(newMCQ);
+    renderMCQ();
+  } else {
+    const newSub = {
+      id: Date.now(),
+      question: qText,
+      solution: `<div class="text-slate-700">${expText}</div>`
+    };
+    subjectiveQuestions.push(newSub);
+    renderSubjective();
+  }
+
+  // รีเซ็ตฟอร์ม
+  document.getElementById('builder-form').reset();
+  updatePreview();
+  alert('เพิ่มโจทย์เรียบร้อยแล้ว!');
+}
+
+// ระบบ Render และตรวจคำตอบ
+function renderMCQ() {
+  const container = document.getElementById('mcq-container');
+  container.innerHTML = mcqQuestions.map((q, index) => `
+    <div class="p-5 border border-slate-200 rounded-xl bg-slate-50/50">
+      <p class="font-semibold text-slate-800 text-lg mb-3">${index + 1}. ${q.question}</p>
+      <div class="space-y-2 mb-4">
+        ${q.options.map((opt, i) => `
+          <label class="flex items-center p-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 cursor-pointer transition">
+            <input type="radio" name="mcq-${q.id}" value="${i}" class="w-4 h-4 text-indigo-600 focus:ring-indigo-500">
+            <span class="ml-3 text-slate-700">${opt}</span>
+          </label>
+        `).join('')}
+      </div>
+      <button onclick="checkMCQAnswer(${q.id})" class="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition">
+        ตรวจคำตอบ
+      </button>
+      <div id="result-${q.id}" class="hidden mt-4 p-4 rounded-lg text-sm"></div>
+    </div>
+  `).join('');
+  if (window.MathJax) MathJax.typesetPromise([container]);
+}
+
+function checkMCQAnswer(qId) {
+  const q = mcqQuestions.find(item => item.id === qId);
+  const selectedOption = document.querySelector(`input[name="mcq-${qId}"]:checked`);
+  const resultDiv = document.getElementById(`result-${qId}`);
+
+  if (!selectedOption) {
+    alert("กรุณาเลือกคำตอบก่อนตรวจครับ");
+    return;
+  }
+
+  const selectedIndex = parseInt(selectedOption.value);
+  resultDiv.classList.remove('hidden', 'bg-emerald-50', 'text-emerald-900', 'bg-rose-50', 'text-rose-900', 'border-emerald-200', 'border-rose-200');
+
+  if (selectedIndex === q.correctIndex) {
+    resultDiv.classList.add('bg-emerald-50', 'text-emerald-900', 'border', 'border-emerald-200');
+    resultDiv.innerHTML = `<p class="font-bold text-emerald-800">✓ ถูกต้อง!</p><p class="mt-1">${q.explanation}</p>`;
+  } else {
+    resultDiv.classList.add('bg-rose-50', 'text-rose-900', 'border', 'border-rose-200');
+    resultDiv.innerHTML = `<p class="font-bold text-rose-800">✕ คำตอบยังไม่ถูกต้อง</p><p class="mt-1">ลองคำนวณทบทวนดูอีกครั้งครับ</p>`;
+  }
+
+  if (window.MathJax) MathJax.typesetPromise([resultDiv]);
+}
+
+function renderSubjective() {
+  const container = document.getElementById('subjective-container');
+  container.innerHTML = subjectiveQuestions.map((q, index) => `
+    <div class="p-5 border border-slate-200 rounded-xl bg-slate-50/50">
+      <p class="font-semibold text-slate-800 text-lg mb-3">${index + 1}. ${q.question}</p>
+      <button onclick="toggleSolution(${q.id})" class="px-4 py-2 bg-slate-700 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 transition">
+        เฉลยอย่างละเอียด
+      </button>
+      <div id="sol-${q.id}" class="hidden mt-4 p-4 bg-emerald-50/60 border-l-4 border-emerald-500 rounded-r-lg text-slate-700 text-sm">
+        ${q.solution}
+      </div>
+    </div>
+  `).join('');
+  if (window.MathJax) MathJax.typesetPromise([container]);
+}
+
+function toggleSolution(qId) {
+  const solDiv = document.getElementById(`sol-${qId}`);
+  solDiv.classList.toggle('hidden');
+}
+
+window.onload = function() {
+  renderMCQ();
+  renderSubjective();
+  updatePreview();
+};
